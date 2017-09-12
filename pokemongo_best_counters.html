@@ -1,7 +1,7 @@
 <html>
 
 <head>
-<title> Test! </title>
+<title> Pokemon Go Best Counters </title>
 <style>
 .pokemon-icon-row {
 	max-height: 40px; 
@@ -11,11 +11,14 @@
 	max-height: 100px; 
 	max-width: 140px;
 }
+.moveTypeImg {
+	vertical-align: middle;
+	max-height: 20px;
+}
 </style>
 </head>
 
 <body>
-<p id="welcome">Hello</p>
 
 <div id="addOpponent">
 	<select id="opponentSelect" name="opponent" onchange='reloadMovesets()'></select>
@@ -44,7 +47,6 @@
 
 
 <script>
-document.getElementById("welcome").innerHTML += " world!";
 
 pokemons = [];
 cpm = [];
@@ -74,29 +76,36 @@ function CPMultiplier(level) {
 
 function translate(english) {
 	var translationList = translation[english];
+	var res = english;
 	if (translationList) {
-		var res = translationList[languageIdx];
-		if (!res && languageIdx == 1) {
-			res = translation[english][0];
+		var trans = translationList[languageIdx];
+		if (!trans && languageIdx == 1) {
+			trans = translation[english][0];
 		}
-		if (!res && languageIdx == 7) {
-			res = translation[english][6];
+		if (!trans && languageIdx == 7) {
+			trans = translation[english][6];
 		}
-		if (res) {
-			return res;
-		} else {
-			return english;
-		}
+		if (trans) {
+			res = trans;
+		} 
 	} else {
 		console.log("Warning: no translation at all for: " + english);
-		return english;
 	}
+	return res.replace(" ", "&nbsp;")
 }
 
 console.log(translation['Shadow Blast']);
 console.log(translation['Bulbasaur']);
 
 console.log(typeName);
+
+function typeImg(type) {
+	return "<img src='resources/45px-Type_" + typeName[type] + ".png' class='moveTypeImg' title='" + translate(typeName[type]) + "'/>";
+}
+
+function moveTypeImg(moveName) {
+	return typeImg(moves[moveName].type);
+}
 
 function Pokemon(number, atk, def, hp, eng, type1, type2) {
 	this.number = number;
@@ -268,6 +277,14 @@ function Pokemon(number, atk, def, hp, eng, type1, type2) {
 		return this.moveSetDefenseDPS(moveSetIdx, opponentIdx) 
 		     * this.tankiness(opponentIdx, opponentMovesetIdx);
 	}
+	
+	this.typeImages = function() {
+		var res = "";
+		for (var i = 0; i < this.types.length; i++) {
+			res += typeImg(this.types[i]);
+		}
+		return res;
+	}
 }
 
 function Move(damage, duration, energy, criticalChance, type) {
@@ -298,7 +315,7 @@ defenseAbilityReference = pokemons[149].defenderAbility(5);
 
 pokemonTable = [];
 
-var defenders = [];
+var defenders = {};
 var defendersStr = searchParams.get('defenders');
 if (defendersStr) {
 	var defendersStrSplit = defendersStr.split(',');
@@ -307,18 +324,28 @@ if (defendersStr) {
 		var defenderIdx = defenderSplit[0];
 		var moveSetIdx = defenderSplit[1];
 		if (isNumeric(defenderIdx)) {
-			defenders.push({'number': defenderIdx, 'moveSetIdx':moveSetIdx});
+			if (!defenders[defenderIdx]) {
+				defenders[defenderIdx] = [];
+			}
+			defenders[defenderIdx].push(moveSetIdx);
 		}
 	}
 }
+
+console.log(defenders);
 
 maxes = [];
 for (var i = 1; i < pokemons.length; i++) {
 	for (var j = 0; j < pokemons[i].moveSets.length; j++) {
 		row = [];
 		row.push({'title':'#', 					'value': i});
-		row.push({'title':'Pokemon Name', 		'value': pokemons[i].name});
-		row.push({'title':'Move set', 			'value': j, 'display': translate(pokemons[i].moveSets[j].basic) + " / " + translate(pokemons[i].moveSets[j].charged)});
+		row.push({'title':'Pokemon Name', 		'value': pokemons[i].name, 'display': pokemons[i].name 
+																					+ pokemons[i].typeImages()});
+		row.push({'title':'Move set', 			'value': j, 'display': moveTypeImg(pokemons[i].moveSets[j].basic)
+																	 + translate(pokemons[i].moveSets[j].basic) 
+																     + "<br/>" 
+																     + moveTypeImg(pokemons[i].moveSets[j].charged)
+																     + translate(pokemons[i].moveSets[j].charged)});
 		var dpsScore = pokemons[i].moveSetAttackDPS(j) / DPSReference * 100;
 		row.push({'title':'DPS', 	'value': dpsScore, 'display': Math.round(dpsScore)});
 		var damageScore = pokemons[i].duelAbility(j) / duelAbilityReference * 100;
@@ -327,15 +354,26 @@ for (var i = 1; i < pokemons.length; i++) {
 		//row.push({'title':'Defender DPS', 		'value': defenderDPS, 'display': Math.round(defenderDPS)});
 		//var defenderTotal = pokemons[i].defenderAbility(j) / defenseAbilityReference * 100;
 		//row.push({'title':'Defender Total Damage', 'value': defenderTotal, 'display': Math.round(defenderTotal)});
-		for (var k = 0; k < defenders.length; k++) {
-			var defender = pokemons[defenders[k].number];
-			var moveSetIdx = defenders[k].moveSetIdx;
-			var dpsScore2 = pokemons[i].moveSetAttackDPS(j, defender.number) / DPSReference * 100;
+		
+		for (var pokemonNumber in defenders) {
+			var dpsScore2 = pokemons[i].moveSetAttackDPS(j, pokemonNumber) / DPSReference * 100;
 			var DPSBonus = (dpsScore2/dpsScore-1) * 100;
+			var damageScores = [];
+			var sumDamage = 0;
+			for (var k = 0; k < defenders[pokemonNumber].length; k++) {
+				var moveSetIdx = defenders[pokemonNumber][k];
+				var damageScore2 = pokemons[i].duelAbility(j, pokemonNumber, moveSetIdx) / duelAbilityReference * 100;
+				damageScores.push(damageScore2);
+				sumDamage += damageScore2;
+			}
 			row.push({'title':'DPS' ,	'value': dpsScore2, 'display': Math.round(dpsScore2) + " (" + (DPSBonus>=0?"+":"") + Math.round(DPSBonus) + "%)"});
-			var damageScore2 = pokemons[i].duelAbility(j, defender.number, moveSetIdx) / duelAbilityReference * 100;
-			var damageBonus = (damageScore2/damageScore-1) * 100;
-			row.push({'title':'Damage', 'value': damageScore2, 'display': Math.round(damageScore2) + " (" + (damageBonus>=0?"+":"") + Math.round(damageBonus) + "%)"});
+			var averageDamage = sumDamage/defenders[pokemonNumber].length;
+			var damageBonus = (averageDamage/damageScore-1) * 100;
+			row.push({'title':'Average Damage', 'value': averageDamage, 'display': Math.round(averageDamage) + " (" + (damageBonus>=0?"+":"") + Math.round(damageBonus) + "%)"});
+			for (var k = 0; k < defenders[pokemonNumber].length; k++) {
+				damageBonus = (damageScores[k]/damageScore-1) * 100;
+				row.push({'title':'Damage', 'value': damageScores[k], 'display': Math.round(damageScores[k]) + " (" + (damageBonus>=0?"+":"") + Math.round(damageBonus) + "%)"});
+			}
 		}
 	
 		pokemonTable.push(row);
@@ -380,16 +418,22 @@ th = document.createElement('th');
 th.innerHTML='"type-neutral" pokemon';
 th.setAttribute('colspan', '2');
 tr.appendChild(th);
-for (var k = 0; k < defenders.length; k++) {
-	var defender = pokemons[defenders[k].number];
-	var moveSetIdx = defenders[k].moveSetIdx;
-	var defenderDescription = defender.name 
-		+ '<br/>' + translate(defender.moveSets[moveSetIdx].basic)
-		+ '<br/>' + translate(defender.moveSets[moveSetIdx].charged);
+for (var pokemonNumber in defenders) {
+	var defender = pokemons[pokemonNumber];
 	th = document.createElement('th');
-	th.innerHTML="<img src='resources/" + to3digits(defender.number) + ".png' class='pokemon-icon-column'/><br/>" + defenderDescription;
+	th.innerHTML = "<img src='resources/" + to3digits(defender.number) + ".png' class='pokemon-icon-column'/><br/>" + defender.name;
 	th.setAttribute('colspan', '2');
 	tr.appendChild(th);
+
+	for (var k = 0; k < defenders[pokemonNumber].length; k++) {
+		var moveSetIdx = defenders[pokemonNumber][k];
+		th = document.createElement('th');
+		th.innerHTML =  translate(defender.moveSets[moveSetIdx].basic)
+		+ moveTypeImg(defender.moveSets[moveSetIdx].basic) 
+		+ '<br/>' + translate(defender.moveSets[moveSetIdx].charged)
+		+ moveTypeImg(defender.moveSets[moveSetIdx].charged);
+		tr.appendChild(th);
+	}		
 }
 table.appendChild(tr);
 
@@ -497,7 +541,10 @@ function reloadMovesets() {
 		for (var i = 0; i < pokemon.moveSets.length; i++) {
 			var option = document.createElement('option');
 			option.setAttribute('value', i);
-			option.innerHTML = translate(pokemon.moveSets[i].basic) + " / " + translate(pokemon.moveSets[i].charged);
+			option.innerHTML = translate(pokemon.moveSets[i].basic) 
+							 + moveTypeImg(pokemon.moveSets[i].basic) + " / "
+							 + translate(pokemon.moveSets[i].charged)
+							 + moveTypeImg(pokemon.moveSets[i].charged);
 			if (pokemon.moveSets[i].isOld) {
 				option.style.fontStyle = "italic";
 			}
@@ -667,6 +714,25 @@ function initData() {
 		typeName[typeIdx[type]] = type;
 	}
 
+
+	translation['Normal'] 	= ['', '', 'Normal', '', '', '', '', ''];
+	translation['Fighting'] = ['', '', 'Combat', '', '', '', '', ''];
+	translation['Flying'] 	= ['', '', 'Vol', '', '', '', '', ''];
+	translation['Poison'] 	= ['', '', 'Poison', '', '', '', '', ''];
+	translation['Ground'] 	= ['', '', 'Sol', '', '', '', '', ''];
+	translation['Rock'] 	= ['', '', 'Roche', '', '', '', '', ''];
+	translation['Bug'] 		= ['', '', 'Insecte', '', '', '', '', ''];
+	translation['Ghost'] 	= ['', '', 'Spectre', '', '', '', '', ''];
+	translation['Steel'] 	= ['', '', 'Acier', '', '', '', '', ''];
+	translation['Fire'] 	= ['', '', 'Feu', '', '', '', '', ''];
+	translation['Water'] 	= ['', '', 'Eau', '', '', '', '', ''];
+	translation['Grass'] 	= ['', '', 'Plante', '', '', '', '', ''];
+	translation['Electric'] = ['', '', 'Électrique', '', '', '', '', ''];
+	translation['Psychic'] 	= ['', '', 'Psy', '', '', '', '', ''];
+	translation['Ice'] 		= ['', '', 'Glace', '', '', '', '', ''];
+	translation['Dragon'] 	= ['', '', 'Dragon', '', '', '', '', ''];
+	translation['Dark'] 	= ['', '', 'Ténèbres', '', '', '', '', ''];
+	translation['Fairy'] 	= ['', '', 'Fée', '', '', '', '', ''];
 	
 	translation['Pound'] = ['はたく', 'Hataku', 'Écras\'Face', 'Pfund', 'Botta', 'Destructor', '막치기', 'Makchigi'];
 	translation['Karate Chop'] = ['からてチョップ', 'Karate Chop', 'Poing-Karaté', 'Karateschlag', 'Colpokarate', 'Golpe Karate', '태권당수', 'Taegweon Dangsu'];
