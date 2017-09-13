@@ -70,6 +70,11 @@ for (var i = 0; i < languageOptions.length; i++ ) {
 	}
 }
 
+var nbRows = searchParams.get('nbRows');
+if (!nbRows || !isNumeric(nbRows)) {
+	nbRows = 40;
+}
+
 function CPMultiplier(level) {
 	return cpm[level*2];
 }
@@ -354,7 +359,8 @@ for (var i = 1; i < pokemons.length; i++) {
 		//row.push({'title':'Defender DPS', 		'value': defenderDPS, 'display': Math.round(defenderDPS)});
 		//var defenderTotal = pokemons[i].defenderAbility(j) / defenseAbilityReference * 100;
 		//row.push({'title':'Defender Total Damage', 'value': defenderTotal, 'display': Math.round(defenderTotal)});
-		
+		var avgDps = 0;
+		var avgDamage = 0;
 		for (var pokemonNumber in defenders) {
 			var dpsScore2 = pokemons[i].moveSetAttackDPS(j, pokemonNumber) / DPSReference * 100;
 			var DPSBonus = (dpsScore2/dpsScore-1) * 100;
@@ -374,6 +380,16 @@ for (var i = 1; i < pokemons.length; i++) {
 				damageBonus = (damageScores[k]/damageScore-1) * 100;
 				row.push({'title':'Damage', 'value': damageScores[k], 'display': Math.round(damageScores[k]) + " (" + (damageBonus>=0?"+":"") + Math.round(damageBonus) + "%)"});
 			}
+			avgDps += dpsScore2;
+			avgDamage += averageDamage;
+		}
+		if (Object.keys(defenders).length > 0) {	
+			avgDps /= Object.keys(defenders).length;
+			var DPSBonus = (avgDps/dpsScore-1) * 100;
+			avgDamage /= Object.keys(defenders).length;
+			var damageBonus = (avgDamage/damageScore-1) * 100;
+			row.splice(5,0,{'title':'Average DPS', 'value': avgDps, 'display': Math.round(avgDps) + " (" + (DPSBonus>=0?"+":"") + Math.round(DPSBonus) + "%)"});
+			row.splice(6,0,{'title':'Average Damage', 'value': avgDamage, 'display': Math.round(avgDamage) + " (" + (damageBonus>=0?"+":"") + Math.round(damageBonus) + "%)"});
 		}
 	
 		pokemonTable.push(row);
@@ -418,6 +434,14 @@ th = document.createElement('th');
 th.innerHTML='"type-neutral" pokemon';
 th.setAttribute('colspan', '2');
 tr.appendChild(th);
+console.log(defenders);
+console.log(defenders.length);
+if (Object.keys(defenders).length > 0) {	
+	th = document.createElement('th');
+	th.innerHTML='Average Scores considering all selected defenders';
+	th.setAttribute('colspan', '2');
+	tr.appendChild(th);
+}
 for (var pokemonNumber in defenders) {
 	var defender = pokemons[pokemonNumber];
 	th = document.createElement('th');
@@ -442,7 +466,7 @@ tr.appendChild(document.createElement('td')); // icon
 for (var i = 0; i < pokemonTable[0].length; i++) {
 	var th = document.createElement('th');
 	th.innerHTML = pokemonTable[0][i].title;
-	th.setAttribute('onclick', "location.href='" + pageName + "?sortColumn=" + i + "&defenders=" + defendersStr + "&lang=" + languageIdx + "'");
+	th.setAttribute('onclick', "location.href='" + pageName + "?sortColumn=" + i + "&defenders=" + defendersStr + "&lang=" + languageIdx + "&nbRows=" + nbRows + "'");
 	th.setAttribute('style',"cursor:pointer");
 	tr.appendChild(th);
 }
@@ -482,7 +506,7 @@ function to3digits(number) {
 	return number;
 }
 
-for (var i = 0; i < pokemonTable.length; i++) {
+for (var i = 0; i < pokemonTable.length && i < nbRows; i++) {
 	var tr = document.createElement('tr');
 	if (pokemons[pokemonTable[i][0].value].moveSets[pokemonTable[i][2].value].isOld) {
 		tr.style.fontStyle = "italic";
@@ -576,17 +600,17 @@ function addOpponent(){
 			}
 			defendersStr += pokemonIdx + ":" + moveSetValue;
 		}
-		window.location.href = pageName + "?sortColumn=" + sortColumn + "&defenders=" + defendersStr + "&lang=" + languageIdx;
+		window.location.href = pageName + "?sortColumn=" + sortColumn + "&defenders=" + defendersStr + "&lang=" + languageIdx + "&nbRows=" + nbRows;
 	}
 }
 
 function clearOpponents() {
-		window.location.href = pageName + "?sortColumn=" + sortColumn + "&lang=" + languageIdx;
+		window.location.href = pageName + "?sortColumn=" + sortColumn + "&lang=" + languageIdx + "&nbRows=" + nbRows;
 }
 
 function changeLanguage() {
 	window.location.href = pageName + "?sortColumn=" + sortColumn + "&defenders=" + defendersStr 
-		+ "&lang=" + document.getElementById("languageSelect").value;
+		+ "&lang=" + document.getElementById("languageSelect").value + "&nbRows=" + nbRows;
 }
 
 
