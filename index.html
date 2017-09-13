@@ -1,6 +1,7 @@
 <html>
 
 <head>
+<meta charset="UTF-8">
 <title> Pokemon Go Best Counters </title>
 <style>
 .pokemon-icon-row {
@@ -383,7 +384,7 @@ for (var i = 1; i < pokemons.length; i++) {
 			avgDps += dpsScore2;
 			avgDamage += averageDamage;
 		}
-		if (Object.keys(defenders).length > 0) {	
+		if (Object.keys(defenders).length > 1) {	
 			avgDps /= Object.keys(defenders).length;
 			var DPSBonus = (avgDps/dpsScore-1) * 100;
 			avgDamage /= Object.keys(defenders).length;
@@ -436,7 +437,7 @@ th.setAttribute('colspan', '2');
 tr.appendChild(th);
 console.log(defenders);
 console.log(defenders.length);
-if (Object.keys(defenders).length > 0) {	
+if (Object.keys(defenders).length > 1) {	
 	th = document.createElement('th');
 	th.innerHTML='Average Scores considering all selected defenders';
 	th.setAttribute('colspan', '2');
