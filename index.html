@@ -446,7 +446,9 @@ if (Object.keys(defenders).length > 1) {
 for (var pokemonNumber in defenders) {
 	var defender = pokemons[pokemonNumber];
 	th = document.createElement('th');
-	th.innerHTML = "<img src='resources/" + to3digits(defender.number) + ".png' class='pokemon-icon-column'/><br/>" + defender.name;
+	th.innerHTML = "<img src='resources/" + to3digits(defender.number) + ".png' class='pokemon-icon-column'/><br/>" 
+				 + defender.name
+				 + defender.typeImages();
 	th.setAttribute('colspan', '2');
 	tr.appendChild(th);
 
